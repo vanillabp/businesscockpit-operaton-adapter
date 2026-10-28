@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.sql.DataSource;
@@ -170,12 +171,11 @@ public class OperatonTwoAdapterIdsTest {
     final var deployed = (ProcessDefinitionEntity) engine
         .getRepositoryService()
         .getProcessDefinition(definitionId);
-    final var listeners = ((UserTaskActivityBehavior) deployed
+    final var listeners = Objects.requireNonNullElse(((UserTaskActivityBehavior) deployed
         .findActivity(TestWorkflowService.BPMN_TASK_ID)
         .getActivityBehavior())
         .getTaskDefinition()
-        .getBuiltinTaskListeners()
-        .getOrDefault(TaskListener.EVENTNAME_CREATE, List.of());
+        .getBuiltinTaskListenersForEvent(TaskListener.EVENTNAME_CREATE), List.<TaskListener>of());
     assertFalse(listeners.isEmpty(), "no built-in CREATE listener at all");
     return listeners;
 

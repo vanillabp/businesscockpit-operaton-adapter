@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -1053,9 +1054,8 @@ public class OperatonCockpitTest {
             TaskListener.EVENTNAME_CREATE, TaskListener.EVENTNAME_UPDATE,
             TaskListener.EVENTNAME_COMPLETE, TaskListener.EVENTNAME_DELETE)
         .forEach(eventName -> {
-          final var listeners = taskDefinition
-              .getBuiltinTaskListeners()
-              .getOrDefault(eventName, List.of());
+          final var listeners = Objects.requireNonNullElse(
+              taskDefinition.getBuiltinTaskListenersForEvent(eventName), List.<TaskListener>of());
           assertFalse(
               listeners.isEmpty(), "no built-in listener for '%s'".formatted(eventName));
           assertInstanceOf(
@@ -1067,9 +1067,8 @@ public class OperatonCockpitTest {
 
     // and VanillaBP wired the task before the cockpit did. A details provider which reads an
     // aggregate that a completed task has just changed depends on this order
-    final var created = taskDefinition
-        .getBuiltinTaskListeners()
-        .getOrDefault(TaskListener.EVENTNAME_CREATE, List.of());
+    final var created = Objects.requireNonNullElse(
+        taskDefinition.getBuiltinTaskListenersForEvent(TaskListener.EVENTNAME_CREATE), List.<TaskListener>of());
     assertTrue(created.size() > 1, "VanillaBP's own CREATE listener is missing: %s".formatted(created));
     assertFalse(
         created.getFirst() instanceof OperatonUserTaskListener,
