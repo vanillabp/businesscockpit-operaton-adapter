@@ -137,6 +137,23 @@
   </repositories>
 
   <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <!-- the profile 'central-portal' of the release parent brings
+               central-publishing-maven-plugin, which stages every module of the
+               reactor, even one with 'skip.central.release'. This module has no jar, so the
+               plugin stops the whole publish unless the module leaves itself out here. -->
+          <groupId>org.sonatype.central</groupId>
+          <artifactId>central-publishing-maven-plugin</artifactId>
+          <configuration>
+            <excludeArtifacts>
+              <excludeArtifact>${project.artifactId}</excludeArtifact>
+            </excludeArtifacts>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
