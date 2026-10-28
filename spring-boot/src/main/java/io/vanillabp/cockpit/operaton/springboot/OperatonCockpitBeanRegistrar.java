@@ -1,0 +1,96 @@
+package io.vanillabp.cockpit.operaton.springboot;
+
+import org.operaton.bpm.engine.ProcessEngine;
+import org.springframework.beans.factory.BeanRegistrar;
+import org.springframework.beans.factory.BeanRegistry;
+import org.springframework.core.env.Environment;
+
+import io.vanillabp.cockpit.extension.spi.BusinessCockpitBpmsBridge;
+import io.vanillabp.cockpit.operaton.OperatonCockpitBridge;
+import io.vanillabp.cockpit.operaton.OperatonCockpitCustomizer;
+import io.vanillabp.cockpit.operaton.OperatonWorkflowProcesses;
+import io.vanillabp.integration.adapter.AdapterBeanRegistrarSupport;
+import io.vanillabp.operaton.OperatonAdapter;
+import io.vanillabp.operaton.springboot.engine.OperatonEngineHolder;
+
+/**
+ * Registers one Business Cockpit bridge per configured Operaton adapter id.
+ * <p>
+  * The cockpit addresses a workflow by the BPMS holding it, and during a migration that is a
+  * different BPMS per workflow. Two configured Operaton engines are therefore two bridges, and
+  * the platform-neutral half picks the one an event's adapter id names. How many there are is
+  * decided by the configuration, which is why the beans are registered programmatically. They are
+  * element beans and never a bean of type <code>List</code>, because that is how the cockpit's
+  * neutral half collects them on Spring Boot.
+ * <p>
+  * WHICH adapter ids those are is the platform's answer ({@code
+  * AdapterBeanRegistrarSupport#forEachConfiguredAdapterId}), the same one the Operaton adapter
+  * registers its own beans for. Filtering the configured types is not that answer. An id named in
+  * <code>prioritized-adapters</code> needs no section of its own, and an application which
+  * configured nothing at all has the id the classpath derives. A migration setup and a
+  * single-dependency application are therefore exactly the two cases where an extension answering
+  * it itself registers no bridge while the adapter registers fine.
+ * <p>
+ * The bean is supplied lazily: it needs the engine of its adapter id, and the engine is built
+ * from the customizer this extension contributes.
+ */
+public class OperatonCockpitBeanRegistrar implements BeanRegistrar {
+
+  /**
+   * Spring builds the registrar because the auto-configuration imports it. It keeps
+   * no state of its own.
+   */
+  public OperatonCockpitBeanRegistrar() {
+
+  }
+
+  @Override
+  public void register(
+      final BeanRegistry registry,
+      final Environment environment) {
+
+    AdapterBeanRegistrarSupport
+        .forEachConfiguredAdapterId(
+            environment,
+            OperatonAdapter.ADAPTER_TYPE,
+            adapterId -> registry
+                .registerBean(
+                    "BusinessCockpit_Operaton_Bridge_%s".formatted(adapterId),
+                    BusinessCockpitBpmsBridge.class,
+                    spec -> spec
+                        .supplier(supplierContext -> {
+                          final var customizer = supplierContext
+                              .bean(OperatonCockpitCustomizer.class);
+                          return new OperatonCockpitBridge(
+                              customizer.scopeOf(adapterId), customizer
+                                  .engineOf(adapterId), supplierContext.bean(
+                                      OperatonWorkflowProcesses.class), customizer
+                                          .eventBeingReportedOf(adapterId), engineOf(supplierContext, adapterId));
+                        })));
+
+  }
+
+  private static ProcessEngine engineOf(
+      final BeanRegistry.SupplierContext supplierContext,
+      final String adapterId) {
+
+    return supplierContext
+        .beanProvider(OperatonEngineHolder.class)
+        .stream()
+        .filter(engine -> adapterId.equals(engine.getAdapterId()))
+        .findFirst()
+        .orElseThrow(
+            () -> new IllegalStateException(
+                """
+                    The Business Cockpit found no Operaton engine for the adapter '%s', \
+                    although VanillaBP counts that id among the Operaton adapters of this \
+                    application. Add the artifact \
+                    'io.vanillabp:operaton-adapter-spring-boot' to your workflow \
+                    module: the cockpit listens to the engines that adapter builds and has none \
+                    of its own."""
+                    .formatted(adapterId)))
+        .getProcessEngine();
+
+  }
+
+}

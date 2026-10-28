@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- the same release parent the Business Cockpit itself uses, because these artifacts are
+       released to Maven Central under the cockpit's groupId and have to be signed and
+       accompanied by sources and javadoc the way the rest of the cockpit is -->
+  <parent>
+    <groupId>io.vanillabp</groupId>
+    <artifactId>release-parent</artifactId>
+    <version>1.3.0</version>
+  </parent>
+
+  <groupId>io.vanillabp.businesscockpit</groupId>
+  <artifactId>businesscockpit-operaton-adapter-parent</artifactId>
+  <version>0.9.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>VanillaBP Business Cockpit adapter for Operaton</name>
+  <description>Business Cockpit integration for Operaton, built as a VanillaBP 2 extension.</description>
+  <url>https://github.com/vanillabp/businesscockpit-operaton-adapter</url>
+
+  <modules>
+    <module>core</module>
+    <module>spring-boot</module>
+    <module>quarkus</module>
+    <!-- last: it judges the reports the modules above produced -->
+    <module>test-coverage-report</module>
+  </modules>
+
+  <scm>
+    <connection>scm:git:https://github.com/vanillabp/businesscockpit-operaton-adapter.git</connection>
+    <developerConnection>scm:git:https://github.com/vanillabp/businesscockpit-operaton-adapter.git</developerConnection>
+    <url>https://github.com/vanillabp/businesscockpit-operaton-adapter/tree/main</url>
+  </scm>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <version.java>21</version.java>
+    <maven.compiler.release>21</maven.compiler.release>
+    <jacoco.version>0.8.15</jacoco.version>
+    <lombok.version>1.18.48</lombok.version>
+    <adapter-platform.version>2.0.0-SNAPSHOT</adapter-platform.version>
+    <!-- the VanillaBP Operaton adapter this extension plugs into: it names the processing
+         context the extension is wired with, and its engine is the one the extension adds its
+         listeners to -->
+    <operaton-adapter.version>2.0.0-SNAPSHOT</operaton-adapter.version>
+    <!-- the Business Cockpit itself: extensions-commons is the platform-neutral half of
+         this extension and is consumed as a published artifact, never copied -->
+    <business-cockpit.version>0.9.0-SNAPSHOT</business-cockpit.version>
+    <spring-boot.version>4.1.2</spring-boot.version>
+    <quarkus.version>3.40.1.1</quarkus.version>
+    <!-- where the build stops, the same number in every VanillaBP repository -->
+    <coverage.threshold.spring-boot>85</coverage.threshold.spring-boot>
+    <coverage.threshold.quarkus>85</coverage.threshold.quarkus>
+    <!-- what a report is expected to show: reported every run, never asserted, so a bad
+         week is not answered by editing a number -->
+    <coverage.rule>90</coverage.rule>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-bom</artifactId>
+        <version>${quarkus.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- one place for every io.vanillabp coordinate of the Version 2 platform: the SPI an
+           extension implements, the core runtime it reads its configuration from, the platform
+           integrations the per-platform modules register with, and the test harness. The
+           adapter SPI is in here as well, although it is written for BPMS adapters: it carries
+           the name-clash avoidance, and the extension has to spell a process id the way the
+           engine of a workflow module stores it. -->
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>vanillabp-bom</artifactId>
+        <version>${adapter-platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- the platform-neutral half of this extension, and the two modules registering it
+           on Spring Boot and on Quarkus -->
+      <dependency>
+        <groupId>io.vanillabp.businesscockpit</groupId>
+        <artifactId>extensions-commons</artifactId>
+        <version>${business-cockpit.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp.businesscockpit</groupId>
+        <artifactId>extensions-commons-spring-boot</artifactId>
+        <version>${business-cockpit.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp.businesscockpit</groupId>
+        <artifactId>extensions-commons-quarkus</artifactId>
+        <version>${business-cockpit.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp.businesscockpit</groupId>
+        <artifactId>extensions-commons-quarkus-deployment</artifactId>
+        <version>${business-cockpit.version}</version>
+      </dependency>
+      <dependency>
+        <!-- the cockpit server every extension repository lets its tests report to. It is
+          published like the rest of extensions-commons, because a test classpath cannot read
+          another repository's test classes -->
+        <groupId>io.vanillabp.businesscockpit</groupId>
+        <artifactId>extensions-commons-test-support</artifactId>
+        <version>${business-cockpit.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp.businesscockpit</groupId>
+        <artifactId>spi-for-java</artifactId>
+        <version>${business-cockpit.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>operaton-adapter</artifactId>
+        <version>${operaton-adapter.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>operaton-adapter-spring-boot</artifactId>
+        <version>${operaton-adapter.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>operaton-adapter-quarkus</artifactId>
+        <version>${operaton-adapter.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>operaton-adapter-quarkus-deployment</artifactId>
+        <version>${operaton-adapter.version}</version>
+      </dependency>
+      <!-- scope 'provided', here and at every declaration a module adds: Lombok translates
+           our source and has no work left once the class file exists, so no application using
+           our artifacts may find it on its runtime classpath. Writing 'optional' here does not
+           do that. Maven copies a managed version, scope and exclusions into a dependency and
+           leaves the optional flag behind, so the POM we publish would say nothing about
+           Lombok at all. No module declares Lombok today, it only stands on the compiler's
+           annotationProcessorPaths, so this scope waits for the first module to declare it. -->
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+        <scope>provided</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.6.1</version>
+          <configuration>
+            <!-- '@{jacoco.agent}' is resolved lazily per module (late property binding),
+                 forwarding coverage also into forked JVMs -->
+            <argLine>@{jacoco.agent}</argLine>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>3.6.1</version>
+          <configuration>
+            <argLine>@{jacoco.agent}</argLine>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.16.0</version>
+          <configuration>
+            <release>${version.java}</release>
+            <compilerArgs>
+              <!-- javac is the only javadoc check which reads a package private class. The
+                   javadoc plugin of the parent opens what a release publishes, so it starts
+                   at protected. Every group is checked here except 'missing': a comment
+                   which was never written is a warning, not a broken build. -->
+              <arg>-Xdoclint:all,-missing</arg>
+            </compilerArgs>
+            <annotationProcessorPaths>
+              <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+              </path>
+            </annotationProcessorPaths>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <configuration>
+            <!-- the release parent runs javadoc with doclint 'all' in every build but lets
+                 warnings pass. Here a warning breaks the build, and most warnings are a
+                 comment nobody wrote. Whoever wires this adapter into an application reads
+                 this javadoc and has no other source, so a missing sentence is a real gap.
+                 The gaps were filled once; a build which lets a warning pass again would
+                 hide the next one behind a green check. -->
+            <failOnWarnings>true</failOnWarnings>
+            <!-- the Quarkus extension processor writes an accessor class next to every
+                 class with build steps, and generated code has no comments. Nobody reads
+                 it and it is never published, so it is left out here. This is the only
+                 exclude: every other one would be a hole in the check. -->
+            <sourceFileExcludes>
+              <sourceFileExclude>**/*$$accessor.java</sourceFileExclude>
+            </sourceFileExcludes>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <!-- the sources jar every build attaches. The release parent binds this plugin
+           only in its 'release' profile, and a snapshot is deployed without that profile,
+           so a snapshot could go out with no sources and show decompiled code in the IDE
+           of everyone who builds against it. It is bound here, at the root, and no longer
+           in each module, so a module added later does not have to remember it. Version,
+           phase and the rest of the configuration come from the parent. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <configuration>
+          <propertyName>jacoco.agent</propertyName>
+          <excludes>
+            <exclude>**/it/**</exclude>
+            <exclude>**/test/**</exclude>
+          </excludes>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>3.10.4</version>
+        <configuration>
+          <pom>
+            <includes>
+              <include>**/pom.xml</include>
+            </includes>
+            <excludes>
+              <exclude>**/target/**/</exclude>
+              <exclude>**/node_modules/**/</exclude>
+              <!-- the workflows carry comments, and the YAML formatter round-trips
+                   through Jackson, which drops them -->
+              <exclude>**/.github/**/</exclude>
+            </excludes>
+            <sortPom>
+              <quiet>true</quiet>
+            </sortPom>
+          </pom>
+          <markdown>
+            <includes>
+              <include>**/*.md</include>
+            </includes>
+            <excludes>
+              <exclude>**/target/**/</exclude>
+              <exclude>**/node_modules/**/</exclude>
+              <exclude>**/.github/**/</exclude>
+            </excludes>
+            <flexmark/>
+          </markdown>
+          <yaml>
+            <includes>
+              <include>**/*.yaml</include>
+            </includes>
+            <excludes>
+              <exclude>**/target/**/</exclude>
+              <exclude>**/node_modules/**/</exclude>
+              <!-- Workflow files are excluded on purpose, the same way the other adapter
+                   repositories do it: the formatter drops comments, and it unquotes version
+                   numbers. -->
+              <exclude>**/.github/**/</exclude>
+              <exclude>.github/workflows/**</exclude>
+            </excludes>
+            <jackson>
+              <yamlFeatures>
+                <MINIMIZE_QUOTES>true</MINIMIZE_QUOTES>
+                <WRITE_DOC_START_MARKER>false</WRITE_DOC_START_MARKER>
+                <INDENT_ARRAYS_WITH_INDICATOR>true</INDENT_ARRAYS_WITH_INDICATOR>
+              </yamlFeatures>
+            </jackson>
+          </yaml>
+          <java>
+            <includes>
+              <include>src/main/java/**/*.java</include>
+              <include>src/test/java/**/*.java</include>
+            </includes>
+            <eclipse>
+              <file>${maven.multiModuleProjectDirectory}/formatting_conventions.xml</file>
+              <version>4.35</version>
+            </eclipse>
+            <removeUnusedImports/>
+            <importOrder>
+              <order>java,javax,org,com,at.phactum</order>
+            </importOrder>
+          </java>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>process-sources</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

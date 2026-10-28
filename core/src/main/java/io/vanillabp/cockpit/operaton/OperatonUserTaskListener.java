@@ -1,0 +1,72 @@
+package io.vanillabp.cockpit.operaton;
+
+import org.operaton.bpm.engine.delegate.DelegateTask;
+import org.operaton.bpm.engine.delegate.TaskListener;
+
+import io.vanillabp.cockpit.extension.spi.UserTaskEventKind;
+
+/**
+ * The listener the Business Cockpit attaches to one user task of one engine.
+ * <p>
+ * It knows its element from the moment the engine parsed it, so an event costs no lookup in the
+ * model. What the cockpit shows about the task is built here, out of the task the engine handed
+ * over, and it travels with the outbox entry. Nothing is sent from here, so the engine's
+ * transaction is not held open for a server.
+ */
+public class OperatonUserTaskListener implements TaskListener {
+
+  private final OperatonCockpitEvents events;
+
+  private final String bpmnTaskId;
+
+  private final String taskDefinition;
+
+  /**
+   * Builds the listener for one user task of one process.
+   *
+   * @param events Where the observed event is reported
+   * @param bpmnTaskId The BPMN element id of the user task this listener sits on
+   * @param taskDefinition The task's form key, or its element id where it has none
+   */
+  public OperatonUserTaskListener(
+      final OperatonCockpitEvents events,
+      final String bpmnTaskId,
+      final String taskDefinition) {
+
+    this.events = events;
+    this.bpmnTaskId = bpmnTaskId;
+    this.taskDefinition = taskDefinition;
+
+  }
+
+  @Override
+  public void notify(
+      final DelegateTask delegateTask) {
+
+    final var kind = kindOf(delegateTask.getEventName());
+    if (kind == null) {
+      return;
+    }
+    events.reportUserTask(delegateTask, bpmnTaskId, taskDefinition, kind);
+
+  }
+
+  /**
+   * @return What the cockpit calls this engine event, or <code>null</code> for an event the
+   *         cockpit has no kind for - this listener is registered for four of them, and a
+   *         fifth arriving from a later engine is not something to fail a workflow over
+   */
+  private static UserTaskEventKind kindOf(
+      final String eventName) {
+
+    return switch (eventName) {
+      case TaskListener.EVENTNAME_CREATE -> UserTaskEventKind.CREATED;
+      case TaskListener.EVENTNAME_UPDATE -> UserTaskEventKind.UPDATED;
+      case TaskListener.EVENTNAME_COMPLETE -> UserTaskEventKind.COMPLETED;
+      case TaskListener.EVENTNAME_DELETE -> UserTaskEventKind.CANCELED;
+      default -> null;
+    };
+
+  }
+
+}

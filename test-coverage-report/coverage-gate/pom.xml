@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.vanillabp.businesscockpit</groupId>
+    <artifactId>businesscockpit-operaton-adapter-test-coverage-report</artifactId>
+    <version>0.9.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>businesscockpit-operaton-adapter-coverage-gate</artifactId>
+  <name>VanillaBP Business Cockpit adapter for Operaton - Test coverage gate</name>
+  <description>Breaks the build when a platform's aggregated coverage drops below the threshold, or when a module produces coverage data no aggregated report reads. Declared as the LAST module of the reactor, because it judges what the other modules produced.</description>
+
+  <properties>
+    <!-- nothing to publish - this module only judges the reports, and it holds test
+         classes only, so a sources jar would carry nothing but its own META-INF -->
+    <maven.install.skip>true</maven.install.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <maven.source.skip>true</maven.source.skip>
+    <!-- and no javadoc to check either: the parent runs it in every module, and a module
+         which publishes nothing has no reader to write it for -->
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <!-- the gate contributes no coverage itself, so it needs no entry in any report;
+         the empty agent keeps Surefire's inherited '@{jacoco.agent}' resolvable -->
+    <jacoco.skip>true</jacoco.skip>
+    <jacoco.agent/>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.vanillabp</groupId>
+      <artifactId>test-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <!-- This module has test sources only, so its jar is empty. It is built anyway: the
+               Maven Central plugin publishes the bundle from the last module of the reactor,
+               which is this one, and it fails there when the module assigned no file to its
+               artifact, even with 'skip.central.release' set. -->
+          <skipIfEmpty>false</skipIfEmpty>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <coverage.repository.root>${project.basedir}/../..</coverage.repository.root>
+            <!-- the gate runs in 'test', the reports it reads are written in 'verify',
+                 so it has to know whether this run gets that far. Maven's own goals are
+                 a list and arrive empty as a system property; the command line its
+                 launcher exports carries the same answer as text -->
+            <coverage.maven.command>${env.MAVEN_CMD_LINE_ARGS}</coverage.maven.command>
+            <coverage.threshold.spring-boot>${coverage.threshold.spring-boot}</coverage.threshold.spring-boot>
+            <coverage.threshold.quarkus>${coverage.threshold.quarkus}</coverage.threshold.quarkus>
+            <coverage.rule>${coverage.rule}</coverage.rule>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

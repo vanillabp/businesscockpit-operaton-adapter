@@ -1,0 +1,178 @@
+package io.vanillabp.cockpit.operaton.springboot.test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.operaton.bpm.engine.ProcessEngine;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import io.vanillabp.cockpit.extension.spi.BusinessCockpitBpmsBridge;
+import io.vanillabp.cockpit.extension.test.support.CockpitServer;
+import io.vanillabp.integration.test.utils.SuppressOutputExtension;
+
+/**
+ * Tests a workflow module which has an Operaton tenant of its own.
+ * <p>
+ * A tenant name can be set for one workflow module and for the whole adapter. Where both are set,
+ * the module wins. The adapter decides the tenant of a module when it deploys it. After that,
+ * everything the cockpit sends to that engine has to use the same name. A query under the wrong
+ * tenant finds nothing, and an event of a process stored under one name is never recognized if
+ * the extension looks for another.
+ * <p>
+ * Here the name is set at the workflow module and nowhere else. An extension which only reads the
+ * section of the adapter cannot see this level.
+ */
+@SpringBootTest(classes = TestApplication.class, properties = {
+    "vanillabp.workflow-modules.c7-cockpit.adapters.c7.tenant-id=a-tenant-of-its-own"
+})
+@ExtendWith(SuppressOutputExtension.class)
+@SuppressOutputExtension.SuppressBackgroundOutput
+@DirtiesContext
+public class OperatonModuleTenantTest {
+
+  private static final String MODULE_ID = "c7-cockpit";
+
+  private static final String CONFIGURED_TENANT = "a-tenant-of-its-own";
+
+  @DynamicPropertySource
+  static void cockpitServer(
+      final DynamicPropertyRegistry registry) {
+
+    registry.add("vanillabp.cockpit.rest.base-url", CockpitServer::baseUrl);
+
+  }
+
+  @Autowired
+  private TestWorkflowService workflowService;
+
+  @Autowired
+  private TransactionTemplate transactions;
+
+  @Autowired
+  private ProcessEngine engine;
+
+  @Autowired
+  private ObjectProvider<BusinessCockpitBpmsBridge> bridges;
+
+  private BusinessCockpitBpmsBridge bridge() {
+
+    return bridges
+        .stream()
+        .filter(candidate -> "c7".equals(candidate.adapterId()))
+        .findFirst()
+        .orElseThrow();
+
+  }
+
+  private TestAggregate aStartedWorkflow(
+      final String customer) {
+
+    return transactions
+        .execute(status -> {
+          final var aggregate = new TestAggregate();
+          aggregate.setCustomer(customer);
+          return workflowService.processes().startWorkflow(aggregate);
+        });
+
+  }
+
+  private String userTaskIdOf(
+      final TestAggregate aggregate) {
+
+    final var deadline = System.currentTimeMillis() + 30000;
+    while (System.currentTimeMillis() < deadline) {
+      final var task = engine
+          .getTaskService()
+          .createTaskQuery()
+          .processInstanceBusinessKey(String.valueOf(aggregate.getId()))
+          .singleResult();
+      if (task != null) {
+        return task.getId();
+      }
+      try {
+        Thread.sleep(200);
+      } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException("Interrupted while waiting for the engine", e);
+      }
+    }
+    throw new AssertionError(
+        "The user task of aggregate %s never appeared".formatted(aggregate.getId()));
+
+  }
+
+  @Test
+  @DisplayName("The engine deployed the module under the name the module configured")
+  public void theModuleWasDeployedUnderItsOwnTenant() {
+
+    assertEquals(
+        CONFIGURED_TENANT,
+        engine
+            .getRepositoryService()
+            .createProcessDefinitionQuery()
+            .processDefinitionKey(TestWorkflowService.BPMN_PROCESS_ID)
+            .latestVersion()
+            .singleResult()
+            .getTenantId(),
+        "the adapter deployed under another name, so this test proves nothing");
+
+  }
+
+  @Test
+  @DisplayName("What the cockpit reads back about the module is found under that name")
+  public void theCockpitReadsBackUnderTheModulesTenant() {
+
+    final var aggregate = aStartedWorkflow("Wanda");
+    final var userTaskId = userTaskIdOf(aggregate);
+    final var aggregateId = String.valueOf(aggregate.getId());
+
+    final var userTasks = bridge()
+        .userTasksOfAggregate(
+            MODULE_ID, TestWorkflowService.BPMN_PROCESS_ID, aggregateId, List.of());
+    assertEquals(1, userTasks.size(), userTasks.toString());
+    assertEquals(userTaskId, userTasks.getFirst().userTaskId());
+
+    final var workflows = bridge()
+        .workflowsOfAggregate(MODULE_ID, TestWorkflowService.BPMN_PROCESS_ID, aggregateId);
+    assertEquals(1, workflows.size(), workflows.toString());
+
+  }
+
+  @Test
+  @DisplayName("What the engine reports is recognized although it carries that name")
+  public void whatTheEngineReportsIsRecognized() {
+
+    final var aggregate = aStartedWorkflow("Willi");
+    userTaskIdOf(aggregate);
+    // found by its customer and not by its id. Every context of this module runs on a database
+    // of its own and counts its cases from one. So the same id names a case in each context, and
+    // all of them share the cockpit server
+    final var thisCase = "\"customer\":\"Willi\"";
+    final var businessId = "\"businessId\":\"%s\"".formatted(aggregate.getId());
+
+    final var workflow = CockpitServer.awaitRequest("/workflow/created", thisCase);
+    assertTrue(workflow.body().contains(businessId), workflow.body());
+    assertTrue(
+        workflow.body().contains("\"workflowModuleId\":\"%s\"".formatted(MODULE_ID)),
+        workflow.body());
+
+    final var userTask = CockpitServer.awaitRequest("/usertask/created", thisCase);
+    assertTrue(userTask.body().contains(businessId), userTask.body());
+    assertTrue(
+        userTask.body().contains("\"workflowModuleId\":\"%s\"".formatted(MODULE_ID)),
+        userTask.body());
+
+  }
+
+}

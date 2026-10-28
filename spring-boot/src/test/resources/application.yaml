@@ -1,0 +1,83 @@
+spring:
+  datasource:
+    url: "jdbc:h2:mem:${c7-cockpit.test.database-name};DB_CLOSE_DELAY=-1"
+  jpa:
+    hibernate:
+      ddl-auto: create
+vanillabp:
+  outbox:
+    poll-interval: PT0.2S
+    attempt-frequency: PT0.2S
+  adapters:
+    c7:
+      type: operaton
+      name-clash-avoidance: by-adapter
+  prioritized-adapters:
+    - c7
+  cockpit:
+    rest:
+      base-url: replaced-by-the-test
+  workflow-modules:
+    c7-cockpit:
+      adapters:
+        c7:
+          resources-location: classpath*:c7-cockpit/processes
+      workflows:
+        CockpitProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - signers
+          tasks:
+            Approve:
+              implemented-externally: true
+        MultiInstanceProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - signers
+          tasks:
+            MI_Sign:
+              implemented-externally: true
+        NoFormKeyProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - signers
+          tasks:
+            NFK_Approve:
+              implemented-externally: true
+        ExpressionFormKeyProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - signers
+          tasks:
+            EFK_Approve:
+              implemented-externally: true
+        CalledSignProcess:
+          tasks:
+            CS_Sign:
+              implemented-externally: true
+        CaseCallingProcess:
+          allow-full-sync-with-bpms: true
+        CalledStepProcess:
+          allow-full-sync-with-bpms: true
+          tasks:
+            CST_Do:
+              implemented-externally: true
+        OwnCaseProcess:
+          allow-full-sync-with-bpms: true
+          tasks:
+            OC_Check:
+              implemented-externally: true
+        SignalStartedProcess:
+          allow-full-sync-with-bpms: true
+          tasks:
+            SS_Approve:
+              implemented-externally: true
+        UnclaimedProcess:
+          implemented-externally: true
+      cockpit:
+        workflow-module-uri: http://localhost:8081/c7-cockpit
+        ui-uri-type: WEBPACK_MF_REACT
+        ui-uri-path: /remoteEntry.js
+        i18n-languages: en
+        bpmn-description-language: en
+        initiator-source: system

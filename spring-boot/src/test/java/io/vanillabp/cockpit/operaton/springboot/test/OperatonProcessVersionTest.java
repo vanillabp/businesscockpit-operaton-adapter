@@ -1,0 +1,263 @@
+package io.vanillabp.cockpit.operaton.springboot.test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.operaton.bpm.engine.ProcessEngine;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import io.vanillabp.cockpit.extension.spi.BusinessCockpitBpmsBridge;
+import io.vanillabp.cockpit.extension.test.support.CockpitServer;
+import io.vanillabp.integration.test.utils.SuppressOutputExtension;
+
+/**
+ * Tests that the version Operaton counted for the deployed process decides which details provider
+ * serves a case and its user task.
+ * <p>
+ * The workflow service of this application has two providers for its user task and two for its
+ * workflow. One of each pair serves version 1, and the other serves every later version. So only
+ * the version tells them apart. What the cockpit server receives shows which one ran.
+ * <p>
+ * The test deploys a second generation of the model itself, as a release does, and starts a case
+ * on it. A single deployment cannot show this half: the version the application reports has to
+ * follow the deployment and must not stay the same number forever.
+ */
+@SpringBootTest(classes = TestApplication.class)
+@ExtendWith(SuppressOutputExtension.class)
+@SuppressOutputExtension.SuppressBackgroundOutput
+// closed when the class is done: an engine which outlives its test keeps its job executor
+// running against a database the next class works on
+@DirtiesContext
+public class OperatonProcessVersionTest {
+
+  private static final String MODULE_ID = "c7-cockpit";
+
+  /** The model this application deploys. The test reads it to deploy a second one like it. */
+  private static final String MODEL = "c7-cockpit/processes/cockpit-process.bpmn";
+
+  @DynamicPropertySource
+  static void cockpitServer(
+      final DynamicPropertyRegistry registry) {
+
+    registry.add("vanillabp.cockpit.rest.base-url", CockpitServer::baseUrl);
+
+  }
+
+  @Autowired
+  private TestWorkflowService workflowService;
+
+  @Autowired
+  private TransactionTemplate transactions;
+
+  @Autowired
+  private ProcessEngine engine;
+
+  @Autowired
+  private ObjectProvider<BusinessCockpitBpmsBridge> bridges;
+
+  private BusinessCockpitBpmsBridge bridge() {
+
+    return bridges
+        .stream()
+        .filter(candidate -> "c7".equals(candidate.adapterId()))
+        .findFirst()
+        .orElseThrow();
+
+  }
+
+  /**
+   * Another application on the same cockpit server may have reported a case with the same
+   * business id as one of these, because every test class here counts its aggregates from 1 in a
+   * database of its own. So the test forgets what arrived before it, and asserts only on what
+   * arrives afterwards.
+   */
+  @BeforeEach
+  public void forgetWhatArrivedBefore() {
+
+    CockpitServer.forgetRequests();
+
+  }
+
+  /**
+   * Starts a case and its workflow. VanillaBP starts a workflow in two phases. So the aggregate is
+   * saved before the engine has anything, and a test which reads the engine has to wait for it.
+   *
+   * @param customer What the case is called
+   * @return The saved case, whose id is the business key of its workflow
+   */
+  private TestAggregate aStartedWorkflow(
+      final String customer) {
+
+    final var aggregate = transactions
+        .execute(status -> {
+          final var fresh = new TestAggregate();
+          fresh.setCustomer(customer);
+          return workflowService.processes().startWorkflow(fresh);
+        });
+    awaitTheUserTaskOf(aggregate);
+    return aggregate;
+
+  }
+
+  /** Waits until the engine holds the user task of that case. */
+  private void awaitTheUserTaskOf(
+      final TestAggregate aggregate) {
+
+    final var deadline = System.currentTimeMillis() + 30000;
+    while (System.currentTimeMillis() < deadline) {
+      final var task = engine
+          .getTaskService()
+          .createTaskQuery()
+          .processInstanceBusinessKey(String.valueOf(aggregate.getId()))
+          .singleResult();
+      if (task != null) {
+        return;
+      }
+      try {
+        Thread.sleep(200);
+      } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException("Interrupted while waiting for the engine", e);
+      }
+    }
+    throw new AssertionError(
+        "The user task of aggregate %s never appeared".formatted(aggregate.getId()));
+
+  }
+
+  /**
+   * Deploys a second generation of the same model, as a release does: same BPMN process id, same
+   * tenant, one changed name. Operaton counts it as the next version of every process in the file,
+   * and a case started afterwards runs on it.
+   */
+  private void deployASecondGeneration() {
+
+    final String model;
+    try {
+      model = new String(
+          new ClassPathResource(MODEL).getContentAsByteArray(), StandardCharsets.UTF_8);
+    } catch (final IOException e) {
+      throw new UncheckedIOException("The model of this test application could not be read", e);
+    }
+    engine
+        .getRepositoryService()
+        .createDeployment()
+        .tenantId(MODULE_ID)
+        .name("a second generation of the model")
+        .addString(
+            "cockpit-process.bpmn",
+            model.replace("Approve the order", "Approve the order once more"))
+        .deploy();
+
+  }
+
+  /**
+   * What the cockpit server was told about one case. The business id in every report tells it
+   * apart from the reports about other cases.
+   *
+   * @param pathSuffix What the report's path has to end with
+   * @param aggregate The case the report is about
+   * @return The body of that report
+   */
+  private static String reportAbout(
+      final String pathSuffix,
+      final TestAggregate aggregate) {
+
+    return CockpitServer
+        .awaitRequest(pathSuffix, "\"businessId\":\"%s\"".formatted(aggregate.getId()))
+        .body();
+
+  }
+
+  /** The version under which Operaton holds the newest deployment of the test's process. */
+  private String latestVersionOfTheModel() {
+
+    return String
+        .valueOf(
+            engine
+                .getRepositoryService()
+                .createProcessDefinitionQuery()
+                .processDefinitionKey(TestWorkflowService.BPMN_PROCESS_ID)
+                .latestVersion()
+                .singleResult()
+                .getVersion());
+
+  }
+
+  @Test
+  @DisplayName("A second generation of the model moves the case and its task to the other provider")
+  public void theDeployedVersionPicksTheProvider() {
+
+    final var onTheFirst = aStartedWorkflow("Vera");
+    assertEquals("1", latestVersionOfTheModel(), "this application deployed more than one model");
+
+    final var firstCase = reportAbout("/workflow/created", onTheFirst);
+    assertTrue(firstCase.contains(TestWorkflowService.WORKFLOW_OF_THE_FIRST), firstCase);
+    assertFalse(firstCase.contains(TestWorkflowService.WORKFLOW_OF_THE_LATER), firstCase);
+    final var firstTask = reportAbout("/usertask/created", onTheFirst);
+    assertTrue(firstTask.contains(TestWorkflowService.APPROVE_OF_THE_FIRST), firstTask);
+    assertFalse(firstTask.contains(TestWorkflowService.APPROVE_OF_THE_LATER), firstTask);
+
+    deployASecondGeneration();
+    assertEquals("2", latestVersionOfTheModel(), "the second generation was not deployed");
+
+    final var onTheSecond = aStartedWorkflow("Wanda");
+
+    final var laterCase = reportAbout("/workflow/created", onTheSecond);
+    assertTrue(laterCase.contains(TestWorkflowService.WORKFLOW_OF_THE_LATER), laterCase);
+    assertFalse(laterCase.contains(TestWorkflowService.WORKFLOW_OF_THE_FIRST), laterCase);
+    final var laterTask = reportAbout("/usertask/created", onTheSecond);
+    assertTrue(laterTask.contains(TestWorkflowService.APPROVE_OF_THE_LATER), laterTask);
+    assertFalse(laterTask.contains(TestWorkflowService.APPROVE_OF_THE_FIRST), laterTask);
+
+  }
+
+  @Test
+  @DisplayName("Every reference the bridge answers carries the version Operaton counted")
+  public void whatIsReadBackCarriesTheCountedVersion() {
+
+    final var aggregate = aStartedWorkflow("Yara");
+    final var counted = latestVersionOfTheModel();
+
+    final var workflows = bridge()
+        .workflowsOfAggregate(
+            MODULE_ID, TestWorkflowService.BPMN_PROCESS_ID, String.valueOf(aggregate.getId()));
+    assertEquals(1, workflows.size(), workflows.toString());
+    assertEquals(counted, workflows.getFirst().processVersion());
+
+    final var userTasks = bridge()
+        .userTasksOfAggregate(
+            MODULE_ID, TestWorkflowService.BPMN_PROCESS_ID, String.valueOf(aggregate.getId()),
+            List.of());
+    assertEquals(1, userTasks.size(), userTasks.toString());
+    assertEquals(counted, userTasks.getFirst().processVersion());
+
+    assertEquals(
+        counted,
+        bridge()
+            .userTaskOfAggregate(
+                MODULE_ID, TestWorkflowService.BPMN_PROCESS_ID, String.valueOf(aggregate.getId()),
+                userTasks.getFirst().userTaskId())
+            .orElseThrow()
+            .processVersion());
+
+  }
+
+}

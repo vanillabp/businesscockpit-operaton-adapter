@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="CockpitDefinitions" targetNamespace="http://vanillabp.io/businesscockpit/operaton">
+  <bpmn:process id="CockpitProcess" isExecutable="true">
+    <bpmn:startEvent id="Start">
+      <bpmn:outgoing>ToApprove</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="ToApprove" sourceRef="Start" targetRef="Approve" />
+    <bpmn:userTask id="Approve" name="Approve the order" camunda:formKey="approve">
+      <bpmn:incoming>ToApprove</bpmn:incoming>
+      <bpmn:outgoing>ToEnd</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="ToEnd" sourceRef="Approve" targetRef="End" />
+    <bpmn:endEvent id="End">
+      <bpmn:incoming>ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="MultiInstanceProcess" isExecutable="true">
+    <bpmn:startEvent id="MI_Start">
+      <bpmn:outgoing>MI_ToSign</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="MI_ToSign" sourceRef="MI_Start" targetRef="MI_Sign" />
+    <bpmn:userTask id="MI_Sign" name="Sign the order" camunda:formKey="sign">
+      <bpmn:incoming>MI_ToSign</bpmn:incoming>
+      <bpmn:outgoing>MI_ToEnd</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" camunda:collection="${signers}" camunda:elementVariable="signer" />
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="MI_ToEnd" sourceRef="MI_Sign" targetRef="MI_End" />
+    <bpmn:endEvent id="MI_End">
+      <bpmn:incoming>MI_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <!-- the caller of the test about a level the cockpit used to lose. Its call activity names
+       the process it calls in an expression, so the deployment could write nothing onto it,
+       and it iterates over the signers. The business key is passed by the model: the adapter
+       injects that only where it knows which process is called. -->
+  <bpmn:process id="ExpressionCallProcess" isExecutable="true">
+    <bpmn:startEvent id="EC_Start">
+      <bpmn:outgoing>EC_ToCall</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="EC_ToCall" sourceRef="EC_Start" targetRef="EC_Call" />
+    <bpmn:callActivity id="EC_Call" calledElement="${calledProcess}">
+      <bpmn:extensionElements>
+        <camunda:in businessKey="#{execution.processBusinessKey}" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>EC_ToCall</bpmn:incoming>
+      <bpmn:outgoing>EC_ToEnd</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" camunda:collection="${signers}" camunda:elementVariable="signer" />
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="EC_ToEnd" sourceRef="EC_Call" targetRef="EC_End" />
+    <bpmn:endEvent id="EC_End">
+      <bpmn:incoming>EC_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <!-- the process that call activity calls. It iterates over nothing itself, so every level
+       its user task reports belongs to the caller. -->
+  <bpmn:process id="CalledSignProcess" isExecutable="true">
+    <bpmn:startEvent id="CS_Start">
+      <bpmn:outgoing>CS_ToSign</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="CS_ToSign" sourceRef="CS_Start" targetRef="CS_Sign" />
+    <bpmn:userTask id="CS_Sign" name="Sign the round of the caller" camunda:formKey="callerSign">
+      <bpmn:incoming>CS_ToSign</bpmn:incoming>
+      <bpmn:outgoing>CS_ToEnd</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="CS_ToEnd" sourceRef="CS_Sign" targetRef="CS_End" />
+    <bpmn:endEvent id="CS_End">
+      <bpmn:incoming>CS_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="NoFormKeyProcess" isExecutable="true">
+    <bpmn:startEvent id="NFK_Start">
+      <bpmn:outgoing>NFK_ToApprove</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="NFK_ToApprove" sourceRef="NFK_Start" targetRef="NFK_Approve" />
+    <bpmn:userTask id="NFK_Approve" name="A task the modeller gave no form">
+      <bpmn:incoming>NFK_ToApprove</bpmn:incoming>
+      <bpmn:outgoing>NFK_ToEnd</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="NFK_ToEnd" sourceRef="NFK_Approve" targetRef="NFK_End" />
+    <bpmn:endEvent id="NFK_End">
+      <bpmn:incoming>NFK_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="ExpressionFormKeyProcess" isExecutable="true">
+    <bpmn:startEvent id="EFK_Start">
+      <bpmn:outgoing>EFK_ToApprove</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="EFK_ToApprove" sourceRef="EFK_Start" targetRef="EFK_Approve" />
+    <bpmn:userTask id="EFK_Approve" name="Approve with the form the case asks for" camunda:formKey="${formName}">
+      <bpmn:incoming>EFK_ToApprove</bpmn:incoming>
+      <bpmn:outgoing>EFK_ToEnd</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="EFK_ToEnd" sourceRef="EFK_Approve" targetRef="EFK_End" />
+    <bpmn:endEvent id="EFK_End">
+      <bpmn:incoming>EFK_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <!-- a workflow nobody starts through VanillaBP: a broadcast signal starts it, so the
+       instance arrives without a business key, and the application names it in its
+       @WorkflowStartedByBpms method. The user task keeps it running, so that the start is the
+       only thing the cockpit is told about it. -->
+  <bpmn:signal id="CockpitStartSignal" name="cockpitStartSignal" />
+  <bpmn:process id="SignalStartedProcess" isExecutable="true">
+    <bpmn:startEvent id="SS_Start">
+      <bpmn:outgoing>SS_ToApprove</bpmn:outgoing>
+      <bpmn:signalEventDefinition signalRef="CockpitStartSignal" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SS_ToApprove" sourceRef="SS_Start" targetRef="SS_Approve" />
+    <bpmn:userTask id="SS_Approve" name="Approve the signalled order" camunda:formKey="approveSignalled">
+      <bpmn:incoming>SS_ToApprove</bpmn:incoming>
+      <bpmn:outgoing>SS_ToEnd</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="SS_ToEnd" sourceRef="SS_Approve" targetRef="SS_End" />
+    <bpmn:endEvent id="SS_End">
+      <bpmn:incoming>SS_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,269 @@
+# VanillaBP's own names for the Business Cockpit extension for Operaton.
+#
+# The code of this repository is made from the Business Cockpit extension for Camunda 7 in two
+# steps (see bin/sync-from-camunda7.sh). First Operaton's own recipe renames everything which
+# belongs to the engine: packages, Maven coordinates, the getters of the model API. Then this
+# recipe renames what belongs to VanillaBP: the Operaton adapter the extension plugs into, the
+# Java package and the classes of the extension, and the names in strings. Without this second
+# step the extension could not sit next to the Camunda 7 extension in one application, and that
+# side-by-side setup is how an application moves from Camunda 7 to Operaton.
+#
+# Every text rule is case sensitive. A rule which is not would turn 'camunda7' into
+# 'Operaton' as well.
+#
+# The recipes run in the order they are listed. The type renames come first, because they
+# name the classes by their old package. The text rules come last, because they also see
+# what the Java recipes left behind. A text rule turns a file into plain text, and no Java or
+# XML recipe sees that file afterwards.
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.operaton.FromCamunda7
+displayName: VanillaBP's own names for the Business Cockpit extension for Operaton
+description: Renames the adapter, the Java package, the classes and the names in strings of the Business Cockpit extension for Camunda 7.
+recipeList:
+  - io.vanillabp.cockpit.operaton.OperatonVersionComesFromTheAdapter
+  # One entry per class whose name contains 'Camunda7'. Do not edit the lines between the two
+  # markers by hand: bin/write-type-renames.sh writes them from the sources.
+  # BEGIN type renames, written by bin/write-type-renames.sh
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7BusinessCases
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonBusinessCases
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7CockpitBridge
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonCockpitBridge
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7CockpitCustomizer
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonCockpitCustomizer
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7CockpitEvents
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonCockpitEvents
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7CockpitWiring
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonCockpitWiring
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7EventBeingReported
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonEventBeingReported
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7Scope
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonScope
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7UserTaskListener
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonUserTaskListener
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7UserTaskParseListener
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonUserTaskParseListener
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7WorkflowHistoryHandler
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonWorkflowHistoryHandler
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7WorkflowProcesses
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonWorkflowProcesses
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7BusinessCasesTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.OperatonBusinessCasesTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.Camunda7CockpitEventsTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.OperatonCockpitEventsTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.Camunda7EngineCustomizingTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.OperatonEngineCustomizingTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.Camunda7PrefillAtTheEventTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.OperatonPrefillAtTheEventTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.deployment.Camunda7CockpitProcessor
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.deployment.OperatonCockpitProcessor
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7BpmsStartedWorkflowTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.OperatonBpmsStartedWorkflowTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7BridgeOfAPrioritizedAdapterTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.OperatonBridgeOfAPrioritizedAdapterTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7CockpitTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.OperatonCockpitTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7OwnDataSourceTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.OperatonOwnDataSourceTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7ProcessVersionTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.OperatonProcessVersionTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7UnclaimedProcessesTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.OperatonUnclaimedProcessesTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.Camunda7CockpitProducer
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.OperatonCockpitProducer
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.Camunda7CockpitAutoConfiguration
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.OperatonCockpitAutoConfiguration
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.Camunda7CockpitBeanRegistrar
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.OperatonCockpitBeanRegistrar
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7BpmsStartedWorkflowTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.OperatonBpmsStartedWorkflowTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7CalledProcessCaseTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.OperatonCalledProcessCaseTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7CockpitTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.OperatonCockpitTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7HistoryActivityTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.OperatonHistoryActivityTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7ModuleTenantTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.OperatonModuleTenantTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7ProcessVersionTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.OperatonProcessVersionTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7TwoAdapterIdsTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.OperatonTwoAdapterIdsTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7UnclaimedProcessesTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.OperatonUnclaimedProcessesTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7UsePrefixTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.OperatonUsePrefixTest
+  # END type renames
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: io.vanillabp.cockpit.camunda7
+      newPackageName: io.vanillabp.cockpit.operaton
+      recursive: true
+  - io.vanillabp.cockpit.operaton.WhereOperatonAnswersDifferently
+  - io.vanillabp.cockpit.operaton.Camunda7NamesInText
+  - io.vanillabp.cockpit.operaton.DecisionsOfTheCamunda7Extension
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.operaton.OperatonVersionComesFromTheAdapter
+displayName: The Operaton version comes from the Operaton adapter
+description: >-
+  The Camunda 7 extension pins Camunda in the property 'camunda.version' and declares the
+  engine in its core module. This extension pins no Operaton version of its own. It gets the
+  engine through the Operaton adapter, so the two can never use different versions.
+recipeList:
+  # Operaton's recipe has turned the engine into 'org.operaton.bpm:operaton-engine' and the
+  # version into its own 1.x line. The engine comes with the Operaton adapter, in the version
+  # the adapter pins, so the core module does not declare it and the root POM does not manage
+  # it. See decision 2 in the repository's DECISIONS.md.
+  - org.openrewrite.maven.RemoveDependency:
+      groupId: org.operaton.bpm
+      artifactId: operaton-engine
+  - org.openrewrite.maven.RemoveManagedDependency:
+      groupId: org.operaton.bpm
+      artifactId: operaton-engine
+  - org.openrewrite.maven.RemoveProperty:
+      propertyName: camunda.version
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.operaton.WhereOperatonAnswersDifferently
+displayName: Engine calls which Operaton answers differently from Camunda 7
+description: >-
+  An engine method which kept its name and its signature in Operaton, but which answers in
+  another way. The code compiles either way, so only a test finds such a place. Each rule
+  names the test which found it.
+recipeList:
+  # Camunda 7 answers null where no engine command runs, Operaton throws. The code asks
+  # exactly to tell the two cases apart, and 'find' answers empty where Camunda 7 answered
+  # null. Found by OperatonCockpitEventsTest#aCalledProcessIsNotReported.
+  - org.openrewrite.text.FindAndReplace:
+      find: Context.getCommandContext()
+      replace: Context.findCommandContext().orElse(null)
+      caseSensitive: true
+      filePattern: '**/src/main/java/**/*.java'
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.operaton.Camunda7NamesInText
+displayName: The names in strings, comments, resources and imports
+description: >-
+  What no Java recipe of this file sees. Strings, comments, POMs, YAML, properties, service
+  files and the imports of the Operaton adapter's classes.
+recipeList:
+  # The repository of the Camunda 7 adapter first, before 'camunda7' below turns it into a
+  # name nobody uses.
+  - org.openrewrite.text.FindAndReplace:
+      find: camunda-community-hub/vanillabp-camunda7-adapter
+      replace: vanillabp/operaton-adapter
+      caseSensitive: true
+  # The groupId of the Camunda 7 adapter. The Camunda Community Hub owns
+  # 'org.camunda.community', and the Operaton adapter is published as 'io.vanillabp'.
+  - org.openrewrite.text.FindAndReplace:
+      find: org.camunda.community.vanillabp
+      replace: io.vanillabp
+      caseSensitive: true
+  # Class names. The Operaton adapter names its classes the way this rule does, so
+  # 'io.vanillabp.camunda7.api.Camunda7EngineFacts' becomes
+  # 'io.vanillabp.operaton.api.OperatonEngineFacts' together with the rule below. These
+  # classes are not in the sources of this repository, so no type rename above can see them.
+  # Also the names of nested classes, the log prefixes and the class names in resources.
+  - org.openrewrite.text.FindAndReplace:
+      find: Camunda7
+      replace: Operaton
+      caseSensitive: true
+  # The packages of the adapter, the artifactIds of the adapter and of this extension, the
+  # adapter type and the name of the Quarkus extension.
+  - org.openrewrite.text.FindAndReplace:
+      find: camunda7
+      replace: operaton
+      caseSensitive: true
+  # Javadoc, comments, messages and the names of the Maven modules. A version number stays as
+  # it is: 'Camunda 7.24' is a fact about Camunda. So does the name of the log a decision is
+  # cited from, which the last recipe of this file writes. Without that exception a second
+  # cycle of the recipe would turn it into 'Operaton extension's'.
+  # The article goes along, so 'a Camunda 7 engine' becomes 'an Operaton engine'.
+  - org.openrewrite.text.FindAndReplace:
+      find: '\b([aA]) Camunda 7(?!\.\d|\d| forks?\b| family\b|\s+(?:\*|//|#)?\s*(?:adapter|extension)''s\s+(?:\*|//|#)?\s*(?:\{@code )?DECISIONS)'
+      replace: $1n Operaton
+      caseSensitive: true
+      regex: true
+  - org.openrewrite.text.FindAndReplace:
+      find: '(?<!fork of |forks of )Camunda 7(?!\.\d|\d| forks?\b| family\b|\s+(?:\*|//|#)?\s*(?:adapter|extension)''s\s+(?:\*|//|#)?\s*(?:\{@code )?DECISIONS)'
+      replace: Operaton
+      caseSensitive: true
+      regex: true
+  # 'Camunda' alone means the engine the extension listens to: 'the version Camunda counted',
+  # 'a Camunda tenant', 'Camunda's levels'. A name with a number stays, such as 'Camunda 8'
+  # and what the rules above kept of 'Camunda 7'. So does the Camunda Community Hub.
+  - org.openrewrite.text.FindAndReplace:
+      find: '\b([aA]) Camunda\b(?!\s*\d| Community)'
+      replace: $1n Operaton
+      caseSensitive: true
+      regex: true
+  - org.openrewrite.text.FindAndReplace:
+      find: '\bCamunda\b(?!\s*\d| Community)'
+      replace: Operaton
+      caseSensitive: true
+      regex: true
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.operaton.DecisionsOfTheCamunda7Extension
+displayName: The decisions the code cites are those of the Camunda 7 extension
+description: >-
+  A citation 'see decision 3 in the repository's DECISIONS.md' in the generated code means
+  decision 3 of the Camunda 7 extension. This repository numbers its own decisions, so the
+  citation names the log it points at.
+recipeList:
+  # The phrase may be wrapped over two lines of a comment, with '*', '//' or '#' in front of
+  # the second line.
+  - org.openrewrite.text.FindAndReplace:
+      find: '([Dd]ecisions?\s+(?:\*|//|#)?\s*\d{1,3}(?:(?:,|,? and| or)\s+(?:\*|//|#)?\s*\d{1,3})*\s+(?:\*|//|#)?\s*in\s+(?:\*|//|#)?\s*the\s+(?:\*|//|#)?\s*)repository''s(?=\s+(?:\*|//|#)?\s*(?:\{@code )?DECISIONS\.md)'
+      replace: $1Camunda 7 extension's
+      caseSensitive: true
+      regex: true
+      filePattern: '**/*.java;**/pom.xml;**/*.yaml;**/*.properties;**/*.json'
+  # The same for the form 'decision 3 in the DECISIONS.md of this repository'.
+  - org.openrewrite.text.FindAndReplace:
+      find: '([Dd]ecisions?\s+(?:\*|//|#)?\s*\d{1,3}\s+(?:\*|//|#)?\s*in\s+(?:\*|//|#)?\s*the\s+(?:\*|//|#)?\s*)DECISIONS\.md\s+(?:\*|//|#)?\s*of\s+(?:\*|//|#)?\s*this\s+(?:\*|//|#)?\s*repository'
+      replace: $1Camunda 7 extension's DECISIONS.md
+      caseSensitive: true
+      regex: true
+      filePattern: '**/*.java;**/pom.xml;**/*.yaml;**/*.properties;**/*.json'
+  # The same for the shorter form 'decision 3 of DECISIONS.md'.
+  - org.openrewrite.text.FindAndReplace:
+      find: '([Dd]ecisions?\s+(?:\*|//|#)?\s*\d{1,3}\s+(?:\*|//|#)?\s*of\s+(?:\*|//|#)?\s*)(\{@code )?DECISIONS\.md'
+      replace: $1the Camunda 7 extension's $2DECISIONS.md
+      caseSensitive: true
+      regex: true
+      filePattern: '**/*.java;**/pom.xml;**/*.yaml;**/*.properties;**/*.json'
