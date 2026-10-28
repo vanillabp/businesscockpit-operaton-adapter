@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.vanillabp.businesscockpit</groupId>
+    <artifactId>businesscockpit-operaton-adapter-parent</artifactId>
+    <version>0.9.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>businesscockpit-operaton-adapter-migration-tests</artifactId>
+  <name>VanillaBP Business Cockpit adapter for Operaton - Migration tests</name>
+  <description>This extension next to the Business Cockpit extension for Camunda 7 in one Spring Boot application, the way an application runs while it moves from Camunda 7 to Operaton.</description>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>VanillaBP</id>
+      <organization>Phactum Softwareentwicklung GmbH</organization>
+      <organizationUrl>https://www.phactum.at</organizationUrl>
+    </developer>
+  </developers>
+
+  <properties>
+    <!-- a module of tests only: nothing to install, publish or document -->
+    <maven.install.skip>true</maven.install.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <skip.central.release>true</skip.central.release>
+    <maven.source.skip>true</maven.source.skip>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <!-- no coverage either: the module 'spring-boot' already runs the code of this extension,
+         and the Camunda 7 extension is not ours to measure. The empty agent keeps Surefire's
+         inherited '@{jacoco.agent}' resolvable. See decision 5 in the repository's
+         DECISIONS.md. -->
+    <jacoco.skip>true</jacoco.skip>
+    <jacoco.agent/>
+    <!-- the Camunda 7 adapter and the Business Cockpit extension for it, which the test runs
+         next to this one -->
+    <camunda7-adapter.version>2.0.0-SNAPSHOT</camunda7-adapter.version>
+    <camunda7-extension.version>0.9.0-SNAPSHOT</camunda7-extension.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>businesscockpit-operaton-adapter-spring-boot</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vanillabp</groupId>
+      <artifactId>operaton-adapter-spring-boot</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Camunda 7.24 brings the FEEL engine as 'feel-engine:scala-shaded' 1.19.3, Operaton 2.2
+         as the plain 'feel-engine' 1.22.1 with Scala beside it. Both jars hold the classes of
+         'org.camunda.feel', and with both on the classpath the Camunda 7 engine does not start.
+         So Camunda's copy goes, from both artifacts which bring it, and the Camunda 7 engine
+         evaluates its decisions with the older FEEL implementation, which needs no Scala.
+         MigrationTestApplication switches that on. See decision 5 in the repository's
+         DECISIONS.md. -->
+    <dependency>
+      <groupId>io.vanillabp.businesscockpit</groupId>
+      <artifactId>businesscockpit-camunda7-adapter-spring-boot</artifactId>
+      <version>${camunda7-extension.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.camunda.feel</groupId>
+          <artifactId>feel-engine</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.camunda.community.vanillabp</groupId>
+      <artifactId>camunda7-adapter-spring-boot</artifactId>
+      <version>${camunda7-adapter.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.camunda.feel</groupId>
+          <artifactId>feel-engine</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vanillabp</groupId>
+      <artifactId>test-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- the cockpit server the test reports to -->
+      <groupId>io.vanillabp.businesscockpit</groupId>
+      <artifactId>extensions-commons-test-support</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <!-- The snapshots of the Camunda 7 adapter are only in the GitHub Packages registry of the
+       Camunda Community Hub. Reading it needs a login even for a public package, so a build
+       needs a server entry with this id (see CONTRIBUTING.md). The entry goes away once the
+       Camunda 7 adapter has a release on Maven Central. -->
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <id>camunda-community-hub-vanillabp-camunda7-adapter</id>
+      <url>https://maven.pkg.github.com/camunda-community-hub/vanillabp-camunda7-adapter</url>
+    </repository>
+  </repositories>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <skipIfEmpty>true</skipIfEmpty>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
