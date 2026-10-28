@@ -1,0 +1,68 @@
+name: Build
+# A pull request builds and tests. Publishing is the job of
+# publish-snapshots.yaml, which has a concurrency group of its own.
+"on":
+  pull_request:
+  workflow_dispatch:
+  # The nightly build calls this workflow as it is, so the night proves what a pull request
+  # proves. See nightly-build.yaml.
+  workflow_call:
+concurrency:
+  # A group per pull request. GitHub keeps at most one waiting run per group, and a
+  # newer run takes the place of the one that waits. The replaced run ends as
+  # 'cancelled' without ever starting a job, so its pull request is left with no build
+  # result, and nothing in the interface says that a result is missing.
+  # 'cancel-in-progress: false' only protects the run which is already running.
+  #
+  # With the ref in the group name, a build waits only for another build of the same
+  # pull request, and there the newest commit keeps its run. Sharing the group with the
+  # publish workflow was never needed for this build: it runs 'install' with read
+  # access to the registry and uploads nothing, so it can neither overwrite a snapshot
+  # nor be overwritten by one.
+  group: businesscockpit-operaton-adapter-pr-build-${{ github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+      # the Maven the publish of main runs with, see publish-snapshots.yaml for why it is not
+      # the 3.10 of the runner image
+      - name: Use Maven 3.9
+        run: |
+          curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.tar.gz \
+            | tar xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-java@v6
+        with:
+          java-version: 25.0.5+8.0.LTS
+          distribution: temurin
+          cache: maven
+      # 'install' and not 'install verify': install already runs every phase verify has,
+      # so naming both makes Maven walk two lifecycles per module. The tests skip their
+      # second run, the compiler does not, and every javac warning is reported twice. It
+      # stays 'install' because the Quarkus tests load modules from the local repository.
+      - name: Build and test
+        run: mvn -s $GITHUB_WORKSPACE/.github/workflows/github-packages-settings.xml
+          --batch-mode --no-transfer-progress --update-snapshots install
+        env:
+          USER_NAME: "${{ secrets.VANILLABP_USER_NAME }}"
+          USER_TOKEN: "${{ secrets.VANILLABP_USER_TOKEN }}"
+      # what a failing test printed is in these reports, and for a test booting its
+      # application in a forked JVM it is ONLY in that application's own log file
+      - name: Upload the test reports of a failed build
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: |
+            **/target/surefire-reports/**
+            **/target/failsafe-reports/**
+            **/target/*application*.log
+          retention-days: 7
+          if-no-files-found: ignore
