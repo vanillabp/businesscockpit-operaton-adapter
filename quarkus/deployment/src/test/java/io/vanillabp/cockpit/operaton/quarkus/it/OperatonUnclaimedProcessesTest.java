@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -151,9 +152,8 @@ public class OperatonUnclaimedProcessesTest {
             TaskListener.EVENTNAME_CREATE, TaskListener.EVENTNAME_UPDATE,
             TaskListener.EVENTNAME_COMPLETE, TaskListener.EVENTNAME_DELETE)
         .flatMap(
-            eventName -> taskDefinition
-                .getBuiltinTaskListeners()
-                .getOrDefault(eventName, List.of())
+            eventName -> Objects.requireNonNullElse(
+                taskDefinition.getBuiltinTaskListenersForEvent(eventName), List.<TaskListener>of())
                 .stream())
         .toList();
 

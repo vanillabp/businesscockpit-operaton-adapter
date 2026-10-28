@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -199,9 +200,8 @@ public class OperatonCockpitTest {
             TaskListener.EVENTNAME_CREATE, TaskListener.EVENTNAME_UPDATE,
             TaskListener.EVENTNAME_COMPLETE, TaskListener.EVENTNAME_DELETE)
         .forEach(eventName -> {
-          final var listeners = taskDefinition
-              .getBuiltinTaskListeners()
-              .getOrDefault(eventName, List.of());
+          final var listeners = Objects.requireNonNullElse(
+              taskDefinition.getBuiltinTaskListenersForEvent(eventName), List.<TaskListener>of());
           assertFalse(listeners.isEmpty(), "no built-in listener for '%s'".formatted(eventName));
           assertInstanceOf(
               OperatonUserTaskListener.class,
